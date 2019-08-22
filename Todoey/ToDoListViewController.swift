@@ -9,11 +9,15 @@
 import UIKit
 
 class ToDoListViewController: UITableViewController {
-    var toDos = ["Take a shit", "Buy condoms", "Smoke Weed"]
+    let key = "ToDos"
+    var toDos = [String]()
+    
+    let defaults = UserDefaults.standard
 
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
+        toDos = defaults.object(forKey: key) as? [String] ?? [String]()
     }
 
     // MARK: - Tableview Datasource Methods
@@ -42,6 +46,7 @@ class ToDoListViewController: UITableViewController {
         }
     }
     
+    // MARK: - Add new items
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         let alert = UIAlertController(title: "Add Item", message: nil, preferredStyle: .alert)
         alert.addTextField(configurationHandler: { (textField) in
@@ -49,20 +54,15 @@ class ToDoListViewController: UITableViewController {
         })
         
         let addItemAction = UIAlertAction(title: "Add", style: .default) { [unowned alert] _ in
-            let toDo = alert.textFields![0]
+            let toDo = alert.textFields![0].text!
             
-            self.toDos.append(toDo.text!)
+            self.toDos.append(toDo)
+            self.defaults.set(self.toDos, forKey: self.key)
             self.tableView.reloadData()
         }
         
         alert.addAction(addItemAction)
         present(alert, animated: true)
     }
-    // MARK: - Add new items
-    /*
-    @IBAction func addItemButtonPressed(_ sender: UIBarButtonItem) {
-     
-    }
- */
 }
 
