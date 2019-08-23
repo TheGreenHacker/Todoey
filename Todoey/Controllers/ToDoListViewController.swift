@@ -10,21 +10,24 @@ import UIKit
 
 class ToDoListViewController: UITableViewController {
     let key = "ToDos"
-    var toDos = [String]()
+    var toDos = [ToDo]()
     
     let defaults = UserDefaults.standard
 
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
-        toDos = defaults.object(forKey: key) as? [String] ?? [String]()
+        //toDos = defaults.object(forKey: key) as? [String] ?? [String]()
     }
 
     // MARK: - Tableview Datasource Methods
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
-        //let cell = tableView.cellForRow(at: indexPath)
-        cell.textLabel?.text = toDos[indexPath.row]
+        let toDo = toDos[indexPath.row]
+        
+        cell.textLabel?.text = toDo.text
+        cell.accessoryType = toDo.done ? .checkmark : .none
+        
         return cell
     }
     
@@ -34,16 +37,9 @@ class ToDoListViewController: UITableViewController {
     
     // MARK: - TableView Delegate Methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        if let cell = tableView.cellForRow(at: indexPath) {
-            print("Selected cell containing: \(toDos[indexPath.row])")
-            tableView.deselectRow(at: indexPath, animated: true)
-            if cell.accessoryType == .none {
-                cell.accessoryType = .checkmark
-            }
-            else {
-                cell.accessoryType = .none
-            }
-        }
+        tableView.deselectRow(at: indexPath, animated: true)
+        toDos[indexPath.row].done = !toDos[indexPath.row].done
+        tableView.reloadData()
     }
     
     // MARK: - Add new items
@@ -54,10 +50,11 @@ class ToDoListViewController: UITableViewController {
         })
         
         let addItemAction = UIAlertAction(title: "Add", style: .default) { [unowned alert] _ in
-            let toDo = alert.textFields![0].text!
+            let text = alert.textFields![0].text!
+            let toDo = ToDo(text: text, done: false)
             
             self.toDos.append(toDo)
-            self.defaults.set(self.toDos, forKey: self.key)
+            //self.defaults.set(self.toDos, forKey: self.key)
             self.tableView.reloadData()
         }
         
