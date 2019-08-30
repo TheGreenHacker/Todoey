@@ -47,6 +47,7 @@ class ToDoListViewController: UITableViewController{
         */
         //update(text: toDo.text!, done: !toDo.done)
         update(toDo: toDos[indexPath.row])
+        //delete(toDo: toDos[indexPath.row])
         tableView.reloadData()
     }
     
@@ -73,13 +74,19 @@ class ToDoListViewController: UITableViewController{
         do {
             try realm.write {
                 let toDo = ToDo(text: text)
-                category.toDos.append(toDo)
+                category.toDos.append(toDo) // associate new ToDo with current category
                 realm.add(toDo)
             }
         } catch let error as NSError {
             print("Could not create ToDo: \(error)")
         }
         retrieveAll() // update tableview for creation of new cell
+    }
+    
+    //  Get all ToDo's for this category and update the UI
+    func retrieveAll() {
+        toDos = realm.objects(ToDo.self).filter(NSPredicate(format: "ANY category.text == %@", category.text))
+        tableView.reloadData()
     }
     
     // Query database based on specific predicate
@@ -101,19 +108,11 @@ class ToDoListViewController: UITableViewController{
         do {
             try realm.write {
                 realm.delete(toDo)
-                retrieveAll()
             }
         } catch let error as NSError {
             print("Could not delete ToDo: \(error)")
         }
         retrieveAll() // update tableview for deletion of new cell
-    }
-    
-    // MARK: - Get all ToDo's for this category and update the UI
-    func retrieveAll() {
-        let predicate = NSPredicate(format: "ANY category.text == %@", category.text)
-        toDos = retrieve(by: predicate)
-        tableView.reloadData()
     }
 }
 
@@ -124,11 +123,9 @@ extension ToDoListViewController : UISearchBarDelegate {
         searchBar.showsCancelButton = true
     }
     
-    // Fetch and display all ToDo objects in a category that contains the text in the pop up search bar, sorted in alphabetical order
+    // Fetch and display all ToDo objects in a category that contains the text in the pop up search bar, sorted by the ToDo object's date in order of most recent
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-        let predicate = NSPredicate(format: "ANY category.text == %@ AND text CONTAINS[c] %@", category.text, searchBar.text!)
-        let results = retrieve(by: predicate)
-        toDos = results.sorted(byKeyPath: "text")
+        toDos = realm.objects(ToDo.self).filter(NSPredicate(format: "ANY category.text == %@ AND text CONTAINS[c] %@", category.text, searchBar.text!)).sorted(byKeyPath: "date", ascending: false)
         tableView.reloadData()
     }
     

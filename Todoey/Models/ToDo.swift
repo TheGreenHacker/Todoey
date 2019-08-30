@@ -12,6 +12,7 @@ import RealmSwift
 class ToDo: Object {
     @objc dynamic var text = ""
     @objc dynamic var done = false
+    @objc dynamic var date = Date()
     let category = LinkingObjects(fromType: Category.self, property: "toDos")
     /*
     override static func primaryKey() -> String? {
