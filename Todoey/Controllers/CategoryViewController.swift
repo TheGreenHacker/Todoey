@@ -7,17 +7,14 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class CategoryViewController: UITableViewController {
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
-    var categories = [Category]()
+    var categories: Results<Category>!
 
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        let request:NSFetchRequest<Category> = Category.fetchRequest()
-        categories = retrieve(request: request)
+        retrieveAll()
     }
     
     // MARK: - TableView Datasource Methods
@@ -56,35 +53,37 @@ class CategoryViewController: UITableViewController {
             textField.placeholder = "Enter category"
         })
         
-        let addItemAction = UIAlertAction(title: "Add", style: .default) { [unowned alert] _ in
+        let action = UIAlertAction(title: "Add", style: .default) { [unowned alert] _ in
             if let textField = alert.textFields?.first, let text = textField.text {
                 self.create(text: text)
-                self.tableView.reloadData()
+                //self.tableView.reloadData()
             }
         }
         
-        alert.addAction(addItemAction)
+        alert.addAction(action)
         present(alert, animated: true)
     }
     
     // MARK: - CRUD operations
     func create(text: String) {
-        let category = Category(context: context)
+        let category = Category(text: text)
         
-        category.text = text
-        categories.append(category)
-        
-        saveChanges()
+        do {
+            try realm.write {
+                realm.add(category)
+            }
+        } catch let error as NSError {
+            print("Could not create category: \(error)")
+        }
+        retrieveAll()
+        //categories = realm.objects(Category.self)
     }
     
-    func retrieve(request: NSFetchRequest<Category>) -> [Category] {
-        do {
-            return try context.fetch(request)
-        } catch let error as NSError {
-            print("Could not retrieve data: \(error)")
-            return []
-        }
+    func retrieveAll() {
+        categories = realm.objects(Category.self)
+        tableView.reloadData()
     }
+    
     /*
     func update(text : String, done : Bool) {
         let request = NSFetchRequest<NSFetchRequestResult>(entityName: "Category")
@@ -106,14 +105,7 @@ class CategoryViewController: UITableViewController {
         }
     }
     */
-    // MARK: - Save any changes to database
-    func saveChanges() {
-        do {
-            try context.save()
-        } catch let error as NSError {
-            print("Could not save changes: \(error)")
-        }
-    }
+   
     
     
     

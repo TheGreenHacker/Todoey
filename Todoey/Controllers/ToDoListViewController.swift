@@ -7,19 +7,18 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class ToDoListViewController: UITableViewController{
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
-    var toDos = [ToDo]()
     var category : Category!
+    var toDos : Results<ToDo>!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         // print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         // Do any additional setup after loading the view.
-        self.title = category.text!
+        self.title = category.text
         
         retrieveAll()
     }
@@ -42,13 +41,12 @@ class ToDoListViewController: UITableViewController{
     // MARK: - TableView Delegate Methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        let toDo = toDos[indexPath.row]
         /*
         delete(text: toDo.text!)
         toDos.remove(at: indexPath.row)
         */
         //update(text: toDo.text!, done: !toDo.done)
-        update(text: toDo.text!)
+        update(toDo: toDos[indexPath.row])
         tableView.reloadData()
     }
     
@@ -59,88 +57,63 @@ class ToDoListViewController: UITableViewController{
             textField.placeholder = "Enter item"
         })
         
-        let addItemAction = UIAlertAction(title: "Add", style: .default) { [unowned alert] _ in
+        let action = UIAlertAction(title: "Add", style: .default) { [unowned alert] _ in
             if let textField = alert.textFields?.first, let text = textField.text {
                 self.create(text: text)
-                self.tableView.reloadData()
+                //self.tableView.reloadData()
             }
         }
         
-        alert.addAction(addItemAction)
+        alert.addAction(action)
         present(alert, animated: true)
     }
     
     // MARK: - CRUD operations
     func create(text: String) {
-        //let entity = NSEntityDescription.entity(forEntityName: "ToDo", in: context)!
-        
-        //let toDo = ToDo(entity: entity, insertInto: context)
-        let toDo = ToDo(context: context)
-        
-        toDo.text = text
-        toDo.done = false
-        toDo.category = category
-        /*
-        toDo.setValue(text, forKey: "text")
-        toDo.setValue(false, forKey: "done")
-        toDo.setValue(category, forKey: "category")
-        */
-        
-        toDos.append(toDo)
-        
-        saveChanges()
-    }
-    
-    func retrieve(request: NSFetchRequest<ToDo>) -> [ToDo] {
         do {
-            return try context.fetch(request)
+            try realm.write {
+                let toDo = ToDo(text: text)
+                category.toDos.append(toDo)
+                realm.add(toDo)
+            }
         } catch let error as NSError {
-            print("Could not retrieve data: \(error)")
-            return []
+            print("Could not create ToDo: \(error)")
         }
+        retrieveAll() // update tableview for creation of new cell
     }
     
-    func update(text: String) {
-        let request:NSFetchRequest<ToDo> = ToDo.fetchRequest()
-        request.predicate = NSPredicate(format: "category.text == %@ AND text == %@", category.text!, text)
-        
-        let result = retrieve(request: request)
-        if !result.isEmpty {
-            //category.removeFromToDos(result.first!)
-            result.first!.done = !result.first!.done
-            //result.first!.setValue(done, forKey: "done")
-            //result.first!.setValue(nil, forKey: "category")
-            //category.addToToDos(result.first!) , done : Bool
-            saveChanges()
-        }
+    // Query database based on specific predicate
+    func retrieve(by predicate: NSPredicate) -> Results<ToDo> {
+        return realm.objects(ToDo.self).filter(predicate)
     }
     
-    func delete(text : String) {
-        let request:NSFetchRequest<ToDo> = ToDo.fetchRequest()
-        request.predicate = NSPredicate(format: "category.text == %@ AND text == %@", category.text!, text)
-        
-        let result = retrieve(request: request)
-        if !result.isEmpty {
-            context.delete(result.first!)
-            //category.removeFromToDos(result.first!)
-            saveChanges()
-        }
-    }
-    
-    // MARK: - Save any changes to database
-    func saveChanges() {
+    func update(toDo: ToDo) {
         do {
-            try context.save()
+            try realm.write {
+                toDo.done = !toDo.done
+            }
         } catch let error as NSError {
-            print("Could not save changes: \(error)")
+            print("Could not update ToDo: \(error)")
         }
     }
     
-    // MARK: - Get all ToDo's for this category
+    func delete(toDo: ToDo) {
+        do {
+            try realm.write {
+                realm.delete(toDo)
+                retrieveAll()
+            }
+        } catch let error as NSError {
+            print("Could not delete ToDo: \(error)")
+        }
+        retrieveAll() // update tableview for deletion of new cell
+    }
+    
+    // MARK: - Get all ToDo's for this category and update the UI
     func retrieveAll() {
-        let request:NSFetchRequest<ToDo> = ToDo.fetchRequest()
-        request.predicate = NSPredicate.init(format: "category.text == %@", category.text!)
-        toDos = retrieve(request: request)
+        let predicate = NSPredicate(format: "ANY category.text == %@", category.text)
+        toDos = retrieve(by: predicate)
+        tableView.reloadData()
     }
 }
 
@@ -151,23 +124,20 @@ extension ToDoListViewController : UISearchBarDelegate {
         searchBar.showsCancelButton = true
     }
     
+    // Fetch and display all ToDo objects in a category that contains the text in the pop up search bar, sorted in alphabetical order
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-        let request:NSFetchRequest<ToDo> = ToDo.fetchRequest()
-        request.predicate = NSPredicate(format: "category.text == %@ AND text CONTAINS[c] %@", category.text!, searchBar.text!)
-        request.sortDescriptors = [NSSortDescriptor(key: "text", ascending: true)]
-        
-        toDos = retrieve(request: request)
-        
+        let predicate = NSPredicate(format: "ANY category.text == %@ AND text CONTAINS[c] %@", category.text, searchBar.text!)
+        let results = retrieve(by: predicate)
+        toDos = results.sorted(byKeyPath: "text")
         tableView.reloadData()
     }
     
     func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
         retrieveAll()
-        tableView.reloadData()
         
         searchBar.text = ""
         searchBar.showsCancelButton = false
-        searchBar.endEditing(true)
+        searchBar.endEditing(true)  // exit out of the search bar
     }
 
 }
