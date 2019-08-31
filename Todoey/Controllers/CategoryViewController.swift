@@ -9,24 +9,34 @@
 import UIKit
 import RealmSwift
 
-class CategoryViewController: UITableViewController {
+class CategoryViewController: SwipeTableViewController {
     var categories: Results<Category>!
+    override var cellIdentifier: String {
+        get {
+            return "CategoryCell"
+        }
+        set {
+            
+        }
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        tableView.rowHeight = 80.0
         retrieveAll()
     }
     
-    // MARK: - TableView Datasource Methods
-    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
-        let category = categories[indexPath.row]
-        
-        cell.textLabel?.text = category.text
-        
-        return cell
+    // MARK - Swipe delete function
+    override func swipeDelete(in row: Int) {
+        self.delete(category: categories[row])
     }
     
+    // MARK - set cell's properties
+    override func editCell(in row: Int, cell: UITableViewCell) {
+        cell.textLabel?.text = categories[row].text
+    }
+    
+    // MARK: - TableView Datasource Method
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return categories.count
     }
@@ -94,22 +104,18 @@ class CategoryViewController: UITableViewController {
             saveChanges()
         }
     }
-    
-    func delete(text : String) {
-        let request = NSFetchRequest<NSFetchRequestResult>(entityName: "ToDo")
-        request.predicate = NSPredicate(format: "text = %@", text)
-        
-        if let result = retrieve(request: request), let toDo = result.first{
-            context.delete(toDo)
-            saveChanges()
+    */
+    func delete(category: Category) {
+        do {
+            try realm.write {
+                for toDo in category.toDos { // delete all the ToDo's for this category in database
+                    realm.delete(toDo)
+                }
+                realm.delete(category)
+            }
+        } catch let error as NSError {
+            print("Could not delete category: \(error)")
         }
     }
-    */
-   
-    
-    
-    
-    
-    
-    
+ 
 }

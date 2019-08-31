@@ -9,9 +9,17 @@
 import UIKit
 import RealmSwift
 
-class ToDoListViewController: UITableViewController{
+class ToDoListViewController: SwipeTableViewController{
     var category : Category!
     var toDos : Results<ToDo>!
+    override var cellIdentifier: String {
+        get {
+            return "ToDoItemCell"
+        }
+        set {
+            
+        }
+    }
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -22,18 +30,21 @@ class ToDoListViewController: UITableViewController{
         
         retrieveAll()
     }
-
-    // MARK: - Tableview Datasource Methods
-    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
-        let toDo = toDos[indexPath.row]
+    
+    // MARK - Swipe delete function
+    override func swipeDelete(in row: Int) {
+        delete(toDo: toDos[row])
+    }
+    
+    // MARK - set cell's properties
+    override func editCell(in row: Int, cell: UITableViewCell) {
+        let toDo = toDos[row]
         
         cell.textLabel?.text = toDo.text
         cell.accessoryType = toDo.done ? .checkmark : .none
-        
-        return cell
     }
-    
+
+    // MARK: - Tableview Datasource Methods
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return toDos.count
     }
@@ -112,7 +123,6 @@ class ToDoListViewController: UITableViewController{
         } catch let error as NSError {
             print("Could not delete ToDo: \(error)")
         }
-        retrieveAll() // update tableview for deletion of new cell
     }
 }
 
