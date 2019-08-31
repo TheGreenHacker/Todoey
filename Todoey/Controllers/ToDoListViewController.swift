@@ -8,10 +8,12 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 class ToDoListViewController: SwipeTableViewController{
     var category : Category!
     var toDos : Results<ToDo>!
+    @IBOutlet weak var searchBar: UISearchBar!
     override var cellIdentifier: String {
         get {
             return "ToDoItemCell"
@@ -26,9 +28,26 @@ class ToDoListViewController: SwipeTableViewController{
         
         // print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         // Do any additional setup after loading the view.
-        self.title = category.text
-        
+        title = category.text
+        tableView.separatorStyle = .none
+    
         retrieveAll()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        updateNavBar(hexString: category.hexString!)
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        updateNavBar(hexString: "42E4FF")
+    }
+    
+    func updateNavBar(hexString: String) {
+        if let color = UIColor(hexString: hexString), let navBar =  navigationController?.navigationBar {
+            searchBar.barTintColor = color
+            navBar.barTintColor = color
+            navBar.largeTitleTextAttributes = [NSAttributedString.Key.foregroundColor: ContrastColorOf(color, returnFlat: true)]
+        }
     }
     
     // MARK - Swipe delete function
@@ -42,6 +61,12 @@ class ToDoListViewController: SwipeTableViewController{
         
         cell.textLabel?.text = toDo.text
         cell.accessoryType = toDo.done ? .checkmark : .none
+        
+        // Add gradient coloring effects to cell's text and background
+        if let color = UIColor(hexString: category.hexString!)?.darken(byPercentage: CGFloat(row + 1) / CGFloat(toDos.count)) {
+            cell.backgroundColor = color
+            cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+        }
     }
 
     // MARK: - Tableview Datasource Methods
@@ -52,13 +77,7 @@ class ToDoListViewController: SwipeTableViewController{
     // MARK: - TableView Delegate Methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        /*
-        delete(text: toDo.text!)
-        toDos.remove(at: indexPath.row)
-        */
-        //update(text: toDo.text!, done: !toDo.done)
         update(toDo: toDos[indexPath.row])
-        //delete(toDo: toDos[indexPath.row])
         tableView.reloadData()
     }
     
@@ -72,7 +91,6 @@ class ToDoListViewController: SwipeTableViewController{
         let action = UIAlertAction(title: "Add", style: .default) { [unowned alert] _ in
             if let textField = alert.textFields?.first, let text = textField.text {
                 self.create(text: text)
-                //self.tableView.reloadData()
             }
         }
         

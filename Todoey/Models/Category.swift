@@ -11,6 +11,7 @@ import RealmSwift
 
 class Category: Object {
     @objc dynamic var text = ""
+    @objc dynamic var hexString: String? // for persisting color property
     let toDos = List<ToDo>()
     /*
     override static func primaryKey() -> String? {

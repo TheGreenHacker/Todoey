@@ -8,6 +8,7 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 class CategoryViewController: SwipeTableViewController {
     var categories: Results<Category>!
@@ -23,6 +24,7 @@ class CategoryViewController: SwipeTableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         tableView.rowHeight = 80.0
+        tableView.separatorStyle = .none
         retrieveAll()
     }
     
@@ -33,7 +35,12 @@ class CategoryViewController: SwipeTableViewController {
     
     // MARK - set cell's properties
     override func editCell(in row: Int, cell: UITableViewCell) {
-        cell.textLabel?.text = categories[row].text
+        let category = categories[row]
+        cell.textLabel?.text = category.text
+        // Assign cell corresponding to this category to a random color the first time it is created
+        cell.backgroundColor = category.hexString != nil ? UIColor(hexString: category.hexString!) : RandomFlatColor()
+        cell.textLabel?.textColor = ContrastColorOf(cell.backgroundColor!, returnFlat: true)
+        update(category: category, hexString: (cell.backgroundColor?.hexValue())!)
     }
     
     // MARK: - TableView Datasource Method
@@ -86,7 +93,6 @@ class CategoryViewController: SwipeTableViewController {
             print("Could not create category: \(error)")
         }
         retrieveAll()
-        //categories = realm.objects(Category.self)
     }
     
     func retrieveAll() {
@@ -94,17 +100,16 @@ class CategoryViewController: SwipeTableViewController {
         tableView.reloadData()
     }
     
-    /*
-    func update(text : String, done : Bool) {
-        let request = NSFetchRequest<NSFetchRequestResult>(entityName: "Category")
-        request.predicate = NSPredicate(format: "text = %@", text)
-        
-        if let result = retrieve(request: request), let toDo = result.first{
-            toDo.setValue(done, forKey: "done")
-            saveChanges()
+    func update(category: Category, hexString: String) {
+        do {
+            try realm.write {
+                category.hexString = hexString
+            }
+        } catch let error as NSError {
+            print("Could not update category: \(error)")
         }
     }
-    */
+    
     func delete(category: Category) {
         do {
             try realm.write {
@@ -117,5 +122,4 @@ class CategoryViewController: SwipeTableViewController {
             print("Could not delete category: \(error)")
         }
     }
- 
 }
